@@ -88,6 +88,14 @@ if (!class_exists('KanguShipping')) {
             }
         }
 
+        public static function enabled_shipping_calculator(){
+            return apply_filters( "kangu_enabled_shipping_calculator", true );
+        }
+
+        public static function enabled_cart_shipping_changes(){
+            return apply_filters( "kangu_enabled_cart_shipping_changes", true );
+        }
+
         /**
          * Display the order tracking code in order details and the tracking history.
          *
@@ -390,6 +398,9 @@ if (!class_exists('KanguShipping')) {
 
         public static function get_shippings_to_cart()
         {
+            if (!self::enabled_cart_shipping_changes())
+                return;
+            
             $packages = WC()->shipping()->get_packages();
             $first    = true;
 
@@ -420,7 +431,7 @@ if (!class_exists('KanguShipping')) {
                         'package'                  => $package,
                         'available_methods'        => $available_methods,
                         'show_package_details'     => count( $packages ) > 1,
-                        'show_shipping_calculator' => is_cart() && apply_filters( 'woocommerce_shipping_show_shipping_calculator', $first, $i, $package ),
+                        'show_shipping_calculator' => self::enabled_shipping_calculator() ? is_cart() && apply_filters( 'woocommerce_shipping_show_shipping_calculator', $first, $i, $package ) : false,
                         'package_details'          => implode( ', ', $product_names ),
                         'package_name'             => apply_filters( 'woocommerce_shipping_package_name', ( ( $i + 1 ) > 1 ) ? sprintf( _x( 'Shipping %d', 'shipping packages', 'woocommerce' ), ( $i + 1 ) ) : _x( 'Shipping', 'shipping packages', 'woocommerce' ), $i, $package ),
                         'index'                    => $i,
@@ -451,6 +462,9 @@ if (!class_exists('KanguShipping')) {
         /* function for display shipping calculator on product page */
         public function display_shipping_calculator()
         {
+            if (!self::enabled_shipping_calculator())
+                return;
+
             global $product;
             if (get_post_meta($product->get_id(), self::$calculator_metakey, true) != "yes")
                 include_once self::$plugin_dir . 'view/shipping-calculator.php';
@@ -458,6 +472,9 @@ if (!class_exists('KanguShipping')) {
 
         function srt_shipping_calculator()
         {
+            if (!self::enabled_shipping_calculator())
+                return "";
+
             ob_start();
             include_once self::$plugin_dir . 'view/shipping-calculator.php';
             $content = ob_get_contents();
@@ -544,8 +561,11 @@ if (!class_exists('KanguShipping')) {
 
         public function wp_head()
         {
-            wp_enqueue_style('shipping-calculator', self::$plugin_url . "assets/css/shipping-calculator.css");
-            wp_enqueue_style('kangu-cart', self::$plugin_url . 'assets/css/kangu-cart.css');
+            if (self::enabled_shipping_calculator())
+                wp_enqueue_style('shipping-calculator', self::$plugin_url . "assets/css/shipping-calculator.css");
+
+            if (self::enabled_cart_shipping_changes())
+                wp_enqueue_style('kangu-cart', self::$plugin_url . 'assets/css/kangu-cart.css');
 
             /* register jquery */
             wp_enqueue_script('jquery');
@@ -556,8 +576,12 @@ if (!class_exists('KanguShipping')) {
         public function wp_footer()
         {
             wp_enqueue_script('wc-country-select');
-            wp_enqueue_script('shipping-calculator', self::$plugin_url . "assets/js/shipping-calculator.js");
-            wp_enqueue_script('kangu-cart', self::$plugin_url . "assets/js/kangu-cart.js");
+
+            if (self::enabled_shipping_calculator())
+                wp_enqueue_script('shipping-calculator', self::$plugin_url . "assets/js/shipping-calculator.js");
+
+            if (self::enabled_cart_shipping_changes())
+                wp_enqueue_script('kangu-cart', self::$plugin_url . "assets/js/kangu-cart.js");
         }
 
         /* register admin menu for shipping calculator setting */
